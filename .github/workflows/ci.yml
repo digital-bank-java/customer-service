@@ -87,15 +87,44 @@ jobs:
         run: |
           cleanup() {
             docker rm --force customer-service-ci > /dev/null 2>&1 || true
+            docker rm --force customer-service-postgres-ci > /dev/null 2>&1 || true
+            docker network rm customer-service-ci > /dev/null 2>&1 || true
             if [[ -n "${mock_server_pid:-}" ]]; then
               kill "${mock_server_pid}" > /dev/null 2>&1 || true
             fi
           }
           trap cleanup EXIT
 
+          docker network create customer-service-ci
+
           test "$(docker image inspect \
             --format '{{.Config.User}}' \
             digital-bank-java/customer-service:ci)" = "10001:10001"
+
+          docker run --detach \
+            --name customer-service-postgres-ci \
+            --network customer-service-ci \
+            --env POSTGRES_DB=customer_service \
+            --env POSTGRES_USER=customer_service \
+            --env POSTGRES_PASSWORD=customer_service \
+            postgres:16-alpine
+
+          database_ready=false
+          for attempt in {1..30}; do
+            if docker exec customer-service-postgres-ci \
+              pg_isready \
+              --username customer_service \
+              --dbname customer_service > /dev/null 2>&1; then
+              database_ready=true
+              break
+            fi
+            sleep 2
+          done
+
+          if [[ "${database_ready}" != "true" ]]; then
+            docker logs customer-service-postgres-ci
+            exit 1
+          fi
 
           python3 - <<'PY' &
           import json
@@ -108,7 +137,18 @@ jobs:
               "version": "ci",
               "state": None,
               "propertySources": [
-                  {"name": "ci", "source": {"server.port": 8081}}
+                  {
+                      "name": "ci",
+                      "source": {
+                          "server.port": 8081,
+                          "spring.datasource.url": "jdbc:postgresql://customer-service-postgres-ci:5432/customer_service",
+                          "spring.datasource.username": "customer_service",
+                          "spring.datasource.password": "customer_service",
+                          "spring.datasource.driver-class-name": "org.postgresql.Driver",
+                          "spring.jpa.hibernate.ddl-auto": "validate",
+                          "spring.jpa.open-in-view": "false",
+                      },
+                  }
               ],
           }
 
@@ -141,6 +181,7 @@ jobs:
 
           docker run --detach \
             --name customer-service-ci \
+            --network customer-service-ci \
             --publish 8081:8081 \
             --add-host host.docker.internal:host-gateway \
             --env CONFIG_SERVER_URL=http://host.docker.internal:8888 \
