@@ -8,18 +8,17 @@ The environment should include these variables:
 
 ```json
 {
-  "baseUrl": "http://localhost:8081",
   "configServerUrl": "http://localhost:8888",
-  "customerId": ""
+  "customerServiceUrl": "http://localhost:8081"
 }
 ```
 
-For `SIT` and `UAT`, replace `baseUrl` with the API Gateway or service URL for that environment.
+For `SIT` and `UAT`, replace `customerServiceUrl` with the API Gateway or service URL for that environment.
 
 ## Register Customer
 
 ```text
-POST {{ _.baseUrl }}/api/v1/customers
+POST {{ _.customerServiceUrl }}/api/v1/customers
 ```
 
 Headers:
@@ -46,12 +45,18 @@ Expected response:
 201 Created
 ```
 
-After a successful request, copy the `customerId` response value into the active Insomnia environment.
+After a successful request, use the returned `customerId` as the path parameter value for profile requests.
 
 ## Get Customer Profile
 
 ```text
-GET {{ _.baseUrl }}/api/v1/customers/{{ _.customerId }}
+GET {{ _.customerServiceUrl }}/api/v1/customers/:customerId
+```
+
+Path parameters:
+
+```text
+customerId=<customerId returned by Register Customer>
 ```
 
 Expected response:
@@ -63,7 +68,7 @@ Expected response:
 ## Update Customer Profile
 
 ```text
-PATCH {{ _.baseUrl }}/api/v1/customers/{{ _.customerId }}/profile
+PATCH {{ _.customerServiceUrl }}/api/v1/customers/:customerId/profile
 ```
 
 Headers:
@@ -83,6 +88,12 @@ Body:
 }
 ```
 
+Path parameters:
+
+```text
+customerId=<customerId returned by Register Customer>
+```
+
 Expected response:
 
 ```text
@@ -98,7 +109,7 @@ If another update already changed the profile, the same request with an old `exp
 ## OpenAPI Contract
 
 ```text
-GET {{ _.baseUrl }}/v3/api-docs
+GET {{ _.customerServiceUrl }}/v3/api-docs
 ```
 
 Expected response:
@@ -110,7 +121,7 @@ Expected response:
 ## Validation Failure Example
 
 ```text
-POST {{ _.baseUrl }}/api/v1/customers
+POST {{ _.customerServiceUrl }}/api/v1/customers
 ```
 
 Body:
