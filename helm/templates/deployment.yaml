@@ -35,6 +35,24 @@ spec:
               value: {{ .Values.runtime.configServerUrl | quote }}
             - name: SPRING_PROFILES_ACTIVE
               value: {{ .Values.runtime.profile | quote }}
+            - name: SPRING_DATASOURCE_URL
+              value: {{ .Values.database.url | quote }}
+            - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+              value: {{ .Values.database.driverClassName | quote }}
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: {{ .Values.database.usernameKey }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: {{ .Values.database.passwordKey }}
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: {{ .Values.database.hibernateDdlAuto | quote }}
+            - name: SPRING_JPA_OPEN_IN_VIEW
+              value: {{ .Values.database.openInView | quote }}
           securityContext:
             {{- toYaml .Values.containerSecurityContext | nindent 12 }}
           ports:
