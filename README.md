@@ -114,12 +114,14 @@ The runtime image uses numeric non-root user and group `10001:10001`.
 
 The Config Server release must already be healthy in the `digital-bank-sit` namespace. The Customer Service chart uses the internal Kubernetes address `http://config-server:8888` and activates the `sit` profile.
 
+The shared local PostgreSQL release from `platform-infra-local` must also be installed in `digital-bank-sit`. Customer Service connects to the `customer_service` logical database through the in-cluster `postgres` Service and reads credentials from the existing `postgres` Kubernetes Secret.
+
 Validate the chart without changing the cluster:
 
 ```bash
-helm lint helm
+helm lint helm --values helm/values-sit.yaml
 
-helm template customer-service helm |
+helm template customer-service helm --values helm/values-sit.yaml |
   kubectl apply --dry-run=client -f -
 ```
 
@@ -129,6 +131,7 @@ Install or upgrade the release:
 helm upgrade --install customer-service helm \
   --namespace digital-bank-sit \
   --create-namespace \
+  --values helm/values-sit.yaml \
   --wait \
   --timeout 5m
 ```

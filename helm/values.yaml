@@ -12,6 +12,15 @@ runtime:
   profile: sit
   configServerUrl: http://config-server:8888
 
+database:
+  url: jdbc:postgresql://postgres:5432/customer_service
+  driverClassName: org.postgresql.Driver
+  secretName: postgres
+  usernameKey: POSTGRES_USER
+  passwordKey: POSTGRES_PASSWORD
+  hibernateDdlAuto: validate
+  openInView: "false"
+
 service:
   type: ClusterIP
   port: 8081
