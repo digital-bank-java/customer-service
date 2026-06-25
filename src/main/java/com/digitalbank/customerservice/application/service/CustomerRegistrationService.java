@@ -53,14 +53,14 @@ class CustomerRegistrationService implements RegisterCustomerUseCase, GetCustome
 				command.dateOfBirth(),
 				now);
 
-		return CustomerProfile.from(customerRepository.save(customer));
+		return CustomerProfile.fromCustomer(customerRepository.save(customer));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public CustomerProfile getCustomerProfile(CustomerId customerId) {
 		return customerRepository.findById(customerId)
-				.map(CustomerProfile::from)
+				.map(CustomerProfile::fromCustomer)
 				.orElseThrow(() -> new CustomerNotFoundException(customerId));
 	}
 
@@ -83,7 +83,7 @@ class CustomerRegistrationService implements RegisterCustomerUseCase, GetCustome
 				normalizeRequired(command.firstName()),
 				normalizeRequired(command.lastName()),
 				clock.instant());
-		return CustomerProfile.from(customerRepository.save(updatedCustomer));
+		return CustomerProfile.fromCustomer(customerRepository.save(updatedCustomer));
 	}
 
 	private static String normalizeEmail(String value) {

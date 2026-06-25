@@ -18,7 +18,7 @@ public record CustomerProfile(
 		Instant createdAt,
 		Instant updatedAt) {
 
-	public static CustomerProfile from(Customer customer) {
+	public static CustomerProfile fromCustomer(Customer customer) {
 		return new CustomerProfile(
 				customer.id().value().toString(),
 				customer.email(),
