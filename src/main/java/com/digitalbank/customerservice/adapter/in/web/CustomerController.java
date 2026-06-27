@@ -4,6 +4,8 @@ import java.net.URI;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -21,6 +23,8 @@ import com.digitalbank.customerservice.application.port.in.UpdateCustomerProfile
 import com.digitalbank.customerservice.domain.model.CustomerId;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -45,9 +49,15 @@ class CustomerController {
 
 	@PostMapping
 	@Operation(summary = "Register a customer")
-	@ApiResponse(responseCode = "201", description = "Customer registered")
-	@ApiResponse(responseCode = "400", description = "Invalid request")
-	@ApiResponse(responseCode = "409", description = "Customer already exists")
+	@ApiResponse(responseCode = "201", description = "Customer registered", content = @Content(
+			mediaType = MediaType.APPLICATION_JSON_VALUE,
+			schema = @Schema(implementation = CustomerResponse.class)))
+	@ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(
+			mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+			schema = @Schema(implementation = ProblemDetail.class)))
+	@ApiResponse(responseCode = "409", description = "Customer already exists", content = @Content(
+			mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+			schema = @Schema(implementation = ProblemDetail.class)))
 	ResponseEntity<CustomerResponse> registerCustomer(@Valid @RequestBody RegisterCustomerRequest request) {
 		var profile = registerCustomerUseCase.registerCustomer(new RegisterCustomerCommand(
 				request.email(),
@@ -65,8 +75,12 @@ class CustomerController {
 
 	@GetMapping("/{customerId}")
 	@Operation(summary = "Get a customer profile")
-	@ApiResponse(responseCode = "200", description = "Customer profile returned")
-	@ApiResponse(responseCode = "404", description = "Customer not found")
+	@ApiResponse(responseCode = "200", description = "Customer profile returned", content = @Content(
+			mediaType = MediaType.APPLICATION_JSON_VALUE,
+			schema = @Schema(implementation = CustomerResponse.class)))
+	@ApiResponse(responseCode = "404", description = "Customer not found", content = @Content(
+			mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+			schema = @Schema(implementation = ProblemDetail.class)))
 	ResponseEntity<CustomerResponse> getCustomerProfile(@PathVariable UUID customerId) {
 		var profile = getCustomerProfileUseCase.getCustomerProfile(new CustomerId(customerId));
 		return ResponseEntity.ok(CustomerResponse.from(profile));
@@ -74,10 +88,18 @@ class CustomerController {
 
 	@PatchMapping("/{customerId}/profile")
 	@Operation(summary = "Update customer profile")
-	@ApiResponse(responseCode = "200", description = "Customer profile updated")
-	@ApiResponse(responseCode = "400", description = "Invalid request")
-	@ApiResponse(responseCode = "404", description = "Customer not found")
-	@ApiResponse(responseCode = "409", description = "Duplicate or stale update")
+	@ApiResponse(responseCode = "200", description = "Customer profile updated", content = @Content(
+			mediaType = MediaType.APPLICATION_JSON_VALUE,
+			schema = @Schema(implementation = CustomerResponse.class)))
+	@ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(
+			mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+			schema = @Schema(implementation = ProblemDetail.class)))
+	@ApiResponse(responseCode = "404", description = "Customer not found", content = @Content(
+			mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+			schema = @Schema(implementation = ProblemDetail.class)))
+	@ApiResponse(responseCode = "409", description = "Duplicate or stale update", content = @Content(
+			mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+			schema = @Schema(implementation = ProblemDetail.class)))
 	ResponseEntity<CustomerResponse> updateCustomerProfile(
 			@PathVariable UUID customerId,
 			@Valid @RequestBody UpdateCustomerProfileRequest request) {

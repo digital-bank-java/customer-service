@@ -185,6 +185,22 @@ class CustomerApiIntegrationTests {
 		assertThat(response.statusCode()).isEqualTo(200);
 		var openApi = objectMapper.readTree(response.body());
 		assertThat(openApi.path("paths").has("/api/v1/customers")).isTrue();
+
+		var registerResponses = openApi.path("paths").path("/api/v1/customers").path("post").path("responses");
+		assertThat(registerResponses.path("201").path("content").has("application/json")).isTrue();
+		assertThat(registerResponses.path("400").path("content").has("application/problem+json")).isTrue();
+		assertThat(registerResponses.path("409").path("content").has("application/problem+json")).isTrue();
+		assertThat(registerResponses.path("400").path("content").has("application/json")).isFalse();
+
+		var getProfileResponses = openApi.path("paths").path("/api/v1/customers/{customerId}").path("get").path("responses");
+		assertThat(getProfileResponses.path("200").path("content").has("application/json")).isTrue();
+		assertThat(getProfileResponses.path("404").path("content").has("application/problem+json")).isTrue();
+
+		var updateProfileResponses = openApi.path("paths").path("/api/v1/customers/{customerId}/profile").path("patch").path("responses");
+		assertThat(updateProfileResponses.path("200").path("content").has("application/json")).isTrue();
+		assertThat(updateProfileResponses.path("400").path("content").has("application/problem+json")).isTrue();
+		assertThat(updateProfileResponses.path("404").path("content").has("application/problem+json")).isTrue();
+		assertThat(updateProfileResponses.path("409").path("content").has("application/problem+json")).isTrue();
 	}
 
 	private HttpResponse<String> send(String method, String path) throws Exception {
