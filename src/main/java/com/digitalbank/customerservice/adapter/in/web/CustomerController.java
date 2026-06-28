@@ -64,7 +64,7 @@ class CustomerController {
 		this.listCustomersUseCase = listCustomersUseCase;
 	}
 
-	@PostMapping("/api/v1/customers")
+	@PostMapping("/admin/v1/customers")
 	@Operation(summary = "Register a customer")
 	@ApiResponse(responseCode = "201", description = "Customer registered", content = @Content(
 			mediaType = MediaType.APPLICATION_JSON_VALUE,

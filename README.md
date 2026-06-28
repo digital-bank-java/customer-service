@@ -173,7 +173,7 @@ In Insomnia, create equivalent requests using the environment variable:
 ```text
 GET {{ _.apiGatewayUrl }}/customer-service/actuator/health
 GET {{ _.apiGatewayUrl }}/admin/docs/customer-service/v3/api-docs
-POST {{ _.apiGatewayUrl }}/api/v1/customers
+POST {{ _.apiGatewayUrl }}/admin/v1/customers
 GET {{ _.apiGatewayUrl }}/api/v1/customers/{{ _.customerId }}
 PATCH {{ _.apiGatewayUrl }}/api/v1/customers/{{ _.customerId }}/profile
 GET {{ _.apiGatewayUrl }}/admin/v1/customers?page=0&size=20
@@ -196,7 +196,7 @@ Use this request body when registering a customer:
 The equivalent terminal command is:
 
 ```bash
-curl --request POST http://localhost:8080/api/v1/customers \
+curl --request POST http://localhost:8080/admin/v1/customers \
   --header "Content-Type: application/json" \
   --data '{
     "email": "customer@example.com",
