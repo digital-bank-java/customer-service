@@ -161,6 +161,75 @@ class CustomerApiIntegrationTests {
 	}
 
 	@Test
+	void returnsEmptyAdminCustomerPage() throws Exception {
+		var response = send("GET", "/admin/v1/customers?email=missing-admin-customer@example.com");
+
+		assertThat(response.statusCode())
+				.withFailMessage("Expected admin customer search to return 200 but got %s with body: %s",
+						response.statusCode(),
+						response.body())
+				.isEqualTo(200);
+		var page = objectMapper.readTree(response.body());
+		assertThat(page.path("items")).isEmpty();
+		assertThat(page.path("pageNumber").asInt()).isZero();
+		assertThat(page.path("pageSize").asInt()).isEqualTo(20);
+		assertThat(page.path("totalElements").asLong()).isZero();
+		assertThat(page.path("totalPages").asInt()).isZero();
+		assertThat(page.path("last").asBoolean()).isTrue();
+	}
+
+	@Test
+	void returnsFilteredAdminCustomerPageWithTotals() throws Exception {
+		sendJson("POST", "/api/v1/customers", """
+				{
+				  "email": "admin.customer@example.com",
+				  "mobileNumber": "+971508888888",
+				  "firstName": "Admin",
+				  "lastName": "Customer",
+				  "dateOfBirth": "1990-01-01"
+				}
+				""");
+
+		var response = send("GET",
+				"/admin/v1/customers?email=ADMIN.Customer@example.com&page=0&size=10&sort=email,asc");
+
+		assertThat(response.statusCode())
+				.withFailMessage("Expected admin customer search to return 200 but got %s with body: %s",
+						response.statusCode(),
+						response.body())
+				.isEqualTo(200);
+		var page = objectMapper.readTree(response.body());
+		assertThat(page.path("items")).hasSize(1);
+		assertThat(page.path("items").get(0).path("email").asText()).isEqualTo("admin.customer@example.com");
+		assertThat(page.path("items").get(0).path("status").asText()).isEqualTo("ACTIVE");
+		assertThat(page.path("pageNumber").asInt()).isZero();
+		assertThat(page.path("pageSize").asInt()).isEqualTo(10);
+		assertThat(page.path("totalElements").asLong()).isEqualTo(1);
+		assertThat(page.path("totalPages").asInt()).isEqualTo(1);
+		assertThat(page.path("last").asBoolean()).isTrue();
+	}
+
+	@Test
+	void rejectsInvalidAdminCustomerPageSize() throws Exception {
+		var response = send("GET", "/admin/v1/customers?size=101");
+
+		assertThat(response.statusCode()).isEqualTo(400);
+		var problem = objectMapper.readTree(response.body());
+		assertThat(problem.path("type").asText()).isEqualTo("https://digital-bank-java.local/problems/validation-error");
+		assertThat(problem.path("title").asText()).isEqualTo("Invalid request");
+	}
+
+	@Test
+	void rejectsUnsupportedAdminCustomerSortField() throws Exception {
+		var response = send("GET", "/admin/v1/customers?sort=unsupportedField,asc");
+
+		assertThat(response.statusCode()).isEqualTo(400);
+		var problem = objectMapper.readTree(response.body());
+		assertThat(problem.path("type").asText()).isEqualTo("https://digital-bank-java.local/problems/validation-error");
+		assertThat(problem.path("title").asText()).isEqualTo("Invalid request");
+	}
+
+	@Test
 	void rejectsInvalidRegistrationRequest() throws Exception {
 		var response = sendJson("POST", "/api/v1/customers", """
 				{
@@ -185,6 +254,7 @@ class CustomerApiIntegrationTests {
 		assertThat(response.statusCode()).isEqualTo(200);
 		var openApi = objectMapper.readTree(response.body());
 		assertThat(openApi.path("paths").has("/api/v1/customers")).isTrue();
+		assertThat(openApi.path("paths").has("/admin/v1/customers")).isTrue();
 
 		var registerResponses = openApi.path("paths").path("/api/v1/customers").path("post").path("responses");
 		assertThat(registerResponses.path("201").path("content").has("application/json")).isTrue();
@@ -231,6 +301,10 @@ class CustomerApiIntegrationTests {
 				.path("application/problem+json")
 				.path("examples")
 				.has("profile-conflict")).isTrue();
+
+		var adminCustomerResponses = openApi.path("paths").path("/admin/v1/customers").path("get").path("responses");
+		assertThat(adminCustomerResponses.path("200").path("content").has("application/json")).isTrue();
+		assertThat(adminCustomerResponses.path("400").path("content").has("application/problem+json")).isTrue();
 	}
 
 	private HttpResponse<String> send(String method, String path) throws Exception {

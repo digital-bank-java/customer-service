@@ -11,6 +11,8 @@ public interface CustomerRepository {
 
     Optional<Customer> findById(CustomerId customerId);
 
+    CustomerSearchResult search(CustomerSearchCriteria criteria);
+
     boolean existsByEmail(String email);
 
     boolean existsByMobileNumber(String mobileNumber);

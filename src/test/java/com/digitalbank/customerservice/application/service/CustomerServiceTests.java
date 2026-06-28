@@ -8,13 +8,17 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
+import com.digitalbank.customerservice.application.port.in.ListCustomersQuery;
 import com.digitalbank.customerservice.application.port.in.RegisterCustomerCommand;
 import com.digitalbank.customerservice.application.port.in.UpdateCustomerProfileCommand;
+import com.digitalbank.customerservice.application.port.out.CustomerSearchCriteria;
+import com.digitalbank.customerservice.application.port.out.CustomerSearchResult;
 import com.digitalbank.customerservice.application.port.out.CustomerRepository;
 import com.digitalbank.customerservice.domain.exception.CustomerNotFoundException;
 import com.digitalbank.customerservice.domain.exception.CustomerVersionConflictException;
@@ -74,6 +78,29 @@ class CustomerServiceTests {
 	}
 
 	@Test
+	void listsCustomersForAdministration() {
+		service.registerCustomer(validCommand("customer@example.com", "+971501234567"));
+		service.registerCustomer(validCommand("other@example.com", "+971509999999"));
+
+		var page = service.listCustomers(new ListCustomersQuery(
+				CustomerStatus.ACTIVE,
+				" CUSTOMER@example.com ",
+				0,
+				20,
+				List.of()));
+
+		assertThat(page.items()).singleElement().satisfies(profile -> {
+			assertThat(profile.email()).isEqualTo("customer@example.com");
+			assertThat(profile.status()).isEqualTo(CustomerStatus.ACTIVE);
+		});
+		assertThat(page.pageNumber()).isZero();
+		assertThat(page.pageSize()).isEqualTo(20);
+		assertThat(page.totalElements()).isEqualTo(1);
+		assertThat(page.totalPages()).isEqualTo(1);
+		assertThat(page.last()).isTrue();
+	}
+
+	@Test
 	void updatesCustomerProfileWhenVersionMatches() {
 		var registered = service.registerCustomer(validCommand("customer@example.com", "+971501234567"));
 
@@ -125,6 +152,21 @@ class CustomerServiceTests {
 		@Override
 		public Optional<Customer> findById(CustomerId customerId) {
 			return Optional.ofNullable(customers.get(customerId));
+		}
+
+		@Override
+		public CustomerSearchResult search(CustomerSearchCriteria criteria) {
+			var matches = customers.values().stream()
+					.filter(customer -> criteria.status() == null || customer.status().equals(criteria.status()))
+					.filter(customer -> criteria.email() == null || customer.email().equals(criteria.email()))
+					.toList();
+			return new CustomerSearchResult(
+					matches,
+					criteria.pageNumber(),
+					criteria.pageSize(),
+					matches.size(),
+					matches.isEmpty() ? 0 : 1,
+					true);
 		}
 
 		@Override
