@@ -20,12 +20,12 @@ import com.digitalbank.customerservice.domain.model.Customer;
 import com.digitalbank.customerservice.domain.model.CustomerId;
 
 @Service
-class CustomerRegistrationService implements RegisterCustomerUseCase, GetCustomerProfileUseCase, UpdateCustomerProfileUseCase {
+class CustomerService implements RegisterCustomerUseCase, GetCustomerProfileUseCase, UpdateCustomerProfileUseCase {
 
 	private final CustomerRepository customerRepository;
 	private final Clock clock;
 
-	CustomerRegistrationService(CustomerRepository customerRepository, Clock clock) {
+	CustomerService(CustomerRepository customerRepository, Clock clock) {
 		this.customerRepository = customerRepository;
 		this.clock = clock;
 	}
