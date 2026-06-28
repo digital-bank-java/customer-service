@@ -23,11 +23,11 @@ import com.digitalbank.customerservice.domain.model.Customer;
 import com.digitalbank.customerservice.domain.model.CustomerId;
 import com.digitalbank.customerservice.domain.model.CustomerStatus;
 
-class CustomerRegistrationServiceTests {
+class CustomerServiceTests {
 
 	private final InMemoryCustomerRepository customerRepository = new InMemoryCustomerRepository();
 	private final Clock clock = Clock.fixed(Instant.parse("2026-01-01T10:15:30Z"), ZoneOffset.UTC);
-	private final CustomerRegistrationService service = new CustomerRegistrationService(customerRepository, clock);
+	private final CustomerService service = new CustomerService(customerRepository, clock);
 
 	@Test
 	void registersActiveCustomer() {
