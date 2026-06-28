@@ -8,10 +8,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.digitalbank.customerservice.application.port.in.CustomerProfile;
 import com.digitalbank.customerservice.application.port.in.GetCustomerProfileUseCase;
+import com.digitalbank.customerservice.application.port.in.ListCustomersQuery;
+import com.digitalbank.customerservice.application.port.in.ListCustomersUseCase;
+import com.digitalbank.customerservice.application.port.in.PaginatedCustomerProfiles;
 import com.digitalbank.customerservice.application.port.in.RegisterCustomerCommand;
 import com.digitalbank.customerservice.application.port.in.RegisterCustomerUseCase;
 import com.digitalbank.customerservice.application.port.in.UpdateCustomerProfileCommand;
 import com.digitalbank.customerservice.application.port.in.UpdateCustomerProfileUseCase;
+import com.digitalbank.customerservice.application.port.out.CustomerSearchCriteria;
 import com.digitalbank.customerservice.application.port.out.CustomerRepository;
 import com.digitalbank.customerservice.domain.exception.CustomerNotFoundException;
 import com.digitalbank.customerservice.domain.exception.CustomerVersionConflictException;
@@ -20,7 +24,8 @@ import com.digitalbank.customerservice.domain.model.Customer;
 import com.digitalbank.customerservice.domain.model.CustomerId;
 
 @Service
-class CustomerService implements RegisterCustomerUseCase, GetCustomerProfileUseCase, UpdateCustomerProfileUseCase {
+class CustomerService implements RegisterCustomerUseCase, GetCustomerProfileUseCase, UpdateCustomerProfileUseCase,
+		ListCustomersUseCase {
 
 	private final CustomerRepository customerRepository;
 	private final Clock clock;
@@ -65,6 +70,28 @@ class CustomerService implements RegisterCustomerUseCase, GetCustomerProfileUseC
 	}
 
 	@Override
+	@Transactional(readOnly = true)
+	public PaginatedCustomerProfiles listCustomers(ListCustomersQuery query) {
+		var result = customerRepository.search(new CustomerSearchCriteria(
+				query.status(),
+				normalizeOptionalEmail(query.email()),
+				query.pageNumber(),
+				query.pageSize(),
+				query.sort()));
+		var items = result.customers().stream()
+				.map(CustomerProfile::fromCustomer)
+				.toList();
+
+		return new PaginatedCustomerProfiles(
+				items,
+				result.pageNumber(),
+				result.pageSize(),
+				result.totalElements(),
+				result.totalPages(),
+				result.last());
+	}
+
+	@Override
 	@Transactional
 	public CustomerProfile updateCustomerProfile(UpdateCustomerProfileCommand command) {
 		var customer = customerRepository.findById(command.customerId())
@@ -88,6 +115,13 @@ class CustomerService implements RegisterCustomerUseCase, GetCustomerProfileUseC
 
 	private static String normalizeEmail(String value) {
 		return normalizeRequired(value).toLowerCase(Locale.ROOT);
+	}
+
+	private static String normalizeOptionalEmail(String value) {
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		return normalizeEmail(value);
 	}
 
 	private static String normalizeRequired(String value) {

@@ -3,8 +3,14 @@ package com.digitalbank.customerservice.adapter.out.persistence;
 import java.util.Optional;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
+import com.digitalbank.customerservice.application.model.CustomerSortOrder;
+import com.digitalbank.customerservice.application.port.out.CustomerSearchCriteria;
+import com.digitalbank.customerservice.application.port.out.CustomerSearchResult;
 import com.digitalbank.customerservice.application.port.out.CustomerRepository;
 import com.digitalbank.customerservice.domain.exception.DuplicateCustomerException;
 import com.digitalbank.customerservice.domain.model.Customer;
@@ -35,6 +41,26 @@ class PostgresCustomerRepository implements CustomerRepository {
 	}
 
 	@Override
+	public CustomerSearchResult search(CustomerSearchCriteria criteria) {
+		var pageRequest = PageRequest.of(
+				criteria.pageNumber(),
+				criteria.pageSize(),
+				sortFor(criteria));
+		var page = repository.findAll(specificationFor(criteria), pageRequest);
+		var customers = page.getContent().stream()
+				.map(CustomerJpaMapper::toDomain)
+				.toList();
+
+		return new CustomerSearchResult(
+				customers,
+				page.getNumber(),
+				page.getSize(),
+				page.getTotalElements(),
+				page.getTotalPages(),
+				page.isLast());
+	}
+
+	@Override
 	public boolean existsByEmail(String email) {
 		return repository.existsByEmail(email);
 	}
@@ -55,5 +81,37 @@ class PostgresCustomerRepository implements CustomerRepository {
 			return DuplicateCustomerException.mobileNumber();
 		}
 		return DuplicateCustomerException.email();
+	}
+
+	private static Sort sortFor(CustomerSearchCriteria criteria) {
+		if (criteria.sort() == null || criteria.sort().isEmpty()) {
+			return Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.ASC, "customerId"));
+		}
+
+		var orders = criteria.sort().stream()
+				.map(PostgresCustomerRepository::toOrder)
+				.toList();
+		return Sort.by(orders);
+	}
+
+	private static Sort.Order toOrder(CustomerSortOrder sortOrder) {
+		var direction = switch (sortOrder.direction()) {
+			case ASC -> Sort.Direction.ASC;
+			case DESC -> Sort.Direction.DESC;
+		};
+		return new Sort.Order(direction, sortOrder.property());
+	}
+
+	private static Specification<CustomerJpaEntity> specificationFor(CustomerSearchCriteria criteria) {
+		return (root, query, builder) -> {
+			var predicate = builder.conjunction();
+			if (criteria.status() != null) {
+				predicate = builder.and(predicate, builder.equal(root.get("status"), criteria.status()));
+			}
+			if (criteria.email() != null) {
+				predicate = builder.and(predicate, builder.equal(root.get("email"), criteria.email()));
+			}
+			return predicate;
+		};
 	}
 }

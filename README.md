@@ -160,6 +160,61 @@ curl --fail http://localhost:18081/actuator/health/liveness
 curl --fail http://localhost:18081/actuator/health/readiness
 ```
 
+After API Gateway is deployed, prefer verifying Customer Service through the gateway:
+
+```bash
+kubectl port-forward \
+  service/api-gateway 8080:8080 \
+  --namespace digital-bank-sit
+```
+
+In Insomnia, create equivalent requests using the environment variable:
+
+```text
+GET {{ _.apiGatewayUrl }}/customer-service/actuator/health
+GET {{ _.apiGatewayUrl }}/admin/docs/customer-service/v3/api-docs
+POST {{ _.apiGatewayUrl }}/api/v1/customers
+GET {{ _.apiGatewayUrl }}/api/v1/customers/{{ _.customerId }}
+PATCH {{ _.apiGatewayUrl }}/api/v1/customers/{{ _.customerId }}/profile
+GET {{ _.apiGatewayUrl }}/admin/v1/customers?page=0&size=20
+GET {{ _.apiGatewayUrl }}/admin/v1/customers?status=ACTIVE&page=0&size=20&sort=createdAt,desc
+GET {{ _.apiGatewayUrl }}/admin/v1/customers?email={{ _.customerEmail }}&page=0&size=20&sort=email,asc
+```
+
+Use this request body when registering a customer:
+
+```json
+{
+  "email": "customer@example.com",
+  "mobileNumber": "+971501234567",
+  "firstName": "Rami",
+  "lastName": "Customer",
+  "dateOfBirth": "1990-01-01"
+}
+```
+
+The equivalent terminal command is:
+
+```bash
+curl --request POST http://localhost:8080/api/v1/customers \
+  --header "Content-Type: application/json" \
+  --data '{
+    "email": "customer@example.com",
+    "mobileNumber": "+971501234567",
+    "firstName": "Rami",
+    "lastName": "Customer",
+    "dateOfBirth": "1990-01-01"
+  }'
+```
+
+Copy the returned `customerId`, then verify lookup and admin query endpoints:
+
+```bash
+curl --fail http://localhost:8080/api/v1/customers/<customer-id>
+curl --fail "http://localhost:8080/admin/v1/customers?status=ACTIVE&page=0&size=20&sort=createdAt,desc"
+curl --fail "http://localhost:8080/admin/v1/customers?email=customer@example.com&page=0&size=20&sort=email,asc"
+```
+
 Stop port forwarding with `Ctrl+C`. Remove only this release when cleanup is required:
 
 ```bash
