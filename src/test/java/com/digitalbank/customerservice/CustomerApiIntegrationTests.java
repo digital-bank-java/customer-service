@@ -46,7 +46,7 @@ class CustomerApiIntegrationTests {
 
 	@Test
 	void registersAndRetrievesCustomer() throws Exception {
-		var registrationResponse = sendJson("POST", "/api/v1/customers", """
+		var registrationResponse = sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "Api.Customer@example.com",
 				  "mobileNumber": "+971501111111",
@@ -76,7 +76,7 @@ class CustomerApiIntegrationTests {
 
 	@Test
 	void updatesCustomerProfile() throws Exception {
-		var registrationResponse = sendJson("POST", "/api/v1/customers", """
+		var registrationResponse = sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "profile.update@example.com",
 				  "mobileNumber": "+971504444444",
@@ -105,7 +105,7 @@ class CustomerApiIntegrationTests {
 
 	@Test
 	void rejectsStaleProfileUpdate() throws Exception {
-		var registrationResponse = sendJson("POST", "/api/v1/customers", """
+		var registrationResponse = sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "stale.update@example.com",
 				  "mobileNumber": "+971506666666",
@@ -134,7 +134,7 @@ class CustomerApiIntegrationTests {
 
 	@Test
 	void rejectsDuplicateCustomerEmail() throws Exception {
-		sendJson("POST", "/api/v1/customers", """
+		sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "duplicate@example.com",
 				  "mobileNumber": "+971502222222",
@@ -144,7 +144,7 @@ class CustomerApiIntegrationTests {
 				}
 				""");
 
-		var duplicateResponse = sendJson("POST", "/api/v1/customers", """
+		var duplicateResponse = sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "DUPLICATE@example.com",
 				  "mobileNumber": "+971503333333",
@@ -180,7 +180,7 @@ class CustomerApiIntegrationTests {
 
 	@Test
 	void returnsFilteredAdminCustomerPageWithTotals() throws Exception {
-		sendJson("POST", "/api/v1/customers", """
+		sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "admin.customer@example.com",
 				  "mobileNumber": "+971508888888",
@@ -231,7 +231,7 @@ class CustomerApiIntegrationTests {
 
 	@Test
 	void rejectsInvalidRegistrationRequest() throws Exception {
-		var response = sendJson("POST", "/api/v1/customers", """
+		var response = sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "not-an-email",
 				  "mobileNumber": "0501234567",
@@ -253,10 +253,9 @@ class CustomerApiIntegrationTests {
 
 		assertThat(response.statusCode()).isEqualTo(200);
 		var openApi = objectMapper.readTree(response.body());
-		assertThat(openApi.path("paths").has("/api/v1/customers")).isTrue();
 		assertThat(openApi.path("paths").has("/admin/v1/customers")).isTrue();
 
-		var registerResponses = openApi.path("paths").path("/api/v1/customers").path("post").path("responses");
+		var registerResponses = openApi.path("paths").path("/admin/v1/customers").path("post").path("responses");
 		assertThat(registerResponses.path("201").path("content").has("application/json")).isTrue();
 		assertThat(registerResponses.path("400").path("content").has("application/problem+json")).isTrue();
 		assertThat(registerResponses.path("409").path("content").has("application/problem+json")).isTrue();
