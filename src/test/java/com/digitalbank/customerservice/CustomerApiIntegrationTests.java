@@ -191,16 +191,46 @@ class CustomerApiIntegrationTests {
 		assertThat(registerResponses.path("400").path("content").has("application/problem+json")).isTrue();
 		assertThat(registerResponses.path("409").path("content").has("application/problem+json")).isTrue();
 		assertThat(registerResponses.path("400").path("content").has("application/json")).isFalse();
+		assertThat(registerResponses.path("400")
+				.path("content")
+				.path("application/problem+json")
+				.path("examples")
+				.has("validation-error")).isTrue();
+		assertThat(registerResponses.path("409")
+				.path("content")
+				.path("application/problem+json")
+				.path("examples")
+				.has("customer-conflict")).isTrue();
 
 		var getProfileResponses = openApi.path("paths").path("/api/v1/customers/{customerId}").path("get").path("responses");
 		assertThat(getProfileResponses.path("200").path("content").has("application/json")).isTrue();
 		assertThat(getProfileResponses.path("404").path("content").has("application/problem+json")).isTrue();
+		assertThat(getProfileResponses.path("404")
+				.path("content")
+				.path("application/problem+json")
+				.path("examples")
+				.has("customer-not-found")).isTrue();
 
 		var updateProfileResponses = openApi.path("paths").path("/api/v1/customers/{customerId}/profile").path("patch").path("responses");
 		assertThat(updateProfileResponses.path("200").path("content").has("application/json")).isTrue();
 		assertThat(updateProfileResponses.path("400").path("content").has("application/problem+json")).isTrue();
 		assertThat(updateProfileResponses.path("404").path("content").has("application/problem+json")).isTrue();
 		assertThat(updateProfileResponses.path("409").path("content").has("application/problem+json")).isTrue();
+		assertThat(updateProfileResponses.path("400")
+				.path("content")
+				.path("application/problem+json")
+				.path("examples")
+				.has("validation-error")).isTrue();
+		assertThat(updateProfileResponses.path("404")
+				.path("content")
+				.path("application/problem+json")
+				.path("examples")
+				.has("customer-not-found")).isTrue();
+		assertThat(updateProfileResponses.path("409")
+				.path("content")
+				.path("application/problem+json")
+				.path("examples")
+				.has("profile-conflict")).isTrue();
 	}
 
 	private HttpResponse<String> send(String method, String path) throws Exception {
