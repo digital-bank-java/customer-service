@@ -27,7 +27,7 @@ import com.digitalbank.customerservice.domain.model.Customer;
 import com.digitalbank.customerservice.domain.model.CustomerId;
 import com.digitalbank.customerservice.domain.model.CustomerStatus;
 
-class CustomerServiceTests {
+class CustomerServiceTest {
 
 	private final InMemoryCustomerRepository customerRepository = new InMemoryCustomerRepository();
 	private final Clock clock = Clock.fixed(Instant.parse("2026-01-01T10:15:30Z"), ZoneOffset.UTC);
