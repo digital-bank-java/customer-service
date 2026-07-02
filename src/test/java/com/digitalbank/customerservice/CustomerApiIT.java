@@ -22,7 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class CustomerApiIntegrationTests {
+class CustomerApiIT {
 
 	@Container
 	private static final PostgreSQLContainer postgres = new PostgreSQLContainer(
