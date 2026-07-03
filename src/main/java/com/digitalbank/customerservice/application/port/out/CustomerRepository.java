@@ -1,9 +1,8 @@
 package com.digitalbank.customerservice.application.port.out;
 
-import java.util.Optional;
-
 import com.digitalbank.customerservice.domain.model.Customer;
 import com.digitalbank.customerservice.domain.model.CustomerId;
+import java.util.Optional;
 
 public interface CustomerRepository {
 

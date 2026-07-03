@@ -2,11 +2,11 @@ package com.digitalbank.customerservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -17,36 +17,33 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CustomerApiIT {
 
-	@Container
-	private static final PostgreSQLContainer postgres = new PostgreSQLContainer(
-			DockerImageName.parse("postgres:16-alpine"));
+    @Container
+    private static final PostgreSQLContainer postgres =
+            new PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"));
 
-	private final HttpClient httpClient = HttpClient.newHttpClient();
-	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
-	@LocalServerPort
-	private int port;
+    @LocalServerPort
+    private int port;
 
-	@DynamicPropertySource
-	static void configureDatasource(DynamicPropertyRegistry registry) {
-		registry.add("spring.cloud.config.enabled", () -> "false");
-		registry.add("spring.datasource.url", postgres::getJdbcUrl);
-		registry.add("spring.datasource.username", postgres::getUsername);
-		registry.add("spring.datasource.password", postgres::getPassword);
-		registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
-		registry.add("spring.jpa.open-in-view", () -> "false");
-	}
+    @DynamicPropertySource
+    static void configureDatasource(DynamicPropertyRegistry registry) {
+        registry.add("spring.cloud.config.enabled", () -> "false");
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+        registry.add("spring.jpa.open-in-view", () -> "false");
+    }
 
-	@Test
-	void registersAndRetrievesCustomer() throws Exception {
-		var registrationResponse = sendJson("POST", "/admin/v1/customers", """
+    @Test
+    void registersAndRetrievesCustomer() throws Exception {
+        var registrationResponse = sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "Api.Customer@example.com",
 				  "mobileNumber": "+971501111111",
@@ -56,27 +53,29 @@ class CustomerApiIT {
 				}
 				""");
 
-		assertThat(registrationResponse.statusCode()).isEqualTo(201);
-		assertThat(registrationResponse.headers().firstValue("location")).hasValueSatisfying(location -> {
-			assertThat(location).startsWith("/api/v1/customers/");
-		});
+        assertThat(registrationResponse.statusCode()).isEqualTo(201);
+        assertThat(registrationResponse.headers().firstValue("location")).hasValueSatisfying(location -> {
+            assertThat(location).startsWith("/api/v1/customers/");
+        });
 
-		var createdCustomer = objectMapper.readTree(registrationResponse.body());
-		assertThat(createdCustomer.path("customerId").asText()).isNotBlank();
-		assertThat(createdCustomer.path("email").asText()).isEqualTo("api.customer@example.com");
-		assertThat(createdCustomer.path("status").asText()).isEqualTo("ACTIVE");
+        var createdCustomer = objectMapper.readTree(registrationResponse.body());
+        assertThat(createdCustomer.path("customerId").asText()).isNotBlank();
+        assertThat(createdCustomer.path("email").asText()).isEqualTo("api.customer@example.com");
+        assertThat(createdCustomer.path("status").asText()).isEqualTo("ACTIVE");
 
-		var profileResponse = send("GET", "/api/v1/customers/" + createdCustomer.path("customerId").asText());
+        var profileResponse = send(
+                "GET", "/api/v1/customers/" + createdCustomer.path("customerId").asText());
 
-		assertThat(profileResponse.statusCode()).isEqualTo(200);
-		var profile = objectMapper.readTree(profileResponse.body());
-		assertThat(profile.path("customerId").asText()).isEqualTo(createdCustomer.path("customerId").asText());
-		assertThat(profile.path("email").asText()).isEqualTo("api.customer@example.com");
-	}
+        assertThat(profileResponse.statusCode()).isEqualTo(200);
+        var profile = objectMapper.readTree(profileResponse.body());
+        assertThat(profile.path("customerId").asText())
+                .isEqualTo(createdCustomer.path("customerId").asText());
+        assertThat(profile.path("email").asText()).isEqualTo("api.customer@example.com");
+    }
 
-	@Test
-	void updatesCustomerProfile() throws Exception {
-		var registrationResponse = sendJson("POST", "/admin/v1/customers", """
+    @Test
+    void updatesCustomerProfile() throws Exception {
+        var registrationResponse = sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "profile.update@example.com",
 				  "mobileNumber": "+971504444444",
@@ -85,9 +84,12 @@ class CustomerApiIT {
 				  "dateOfBirth": "1990-01-01"
 				}
 				""");
-		var createdCustomer = objectMapper.readTree(registrationResponse.body());
+        var createdCustomer = objectMapper.readTree(registrationResponse.body());
 
-		var updateResponse = sendJson("PATCH", "/api/v1/customers/" + createdCustomer.path("customerId").asText() + "/profile", """
+        var updateResponse = sendJson(
+                "PATCH",
+                "/api/v1/customers/" + createdCustomer.path("customerId").asText() + "/profile",
+                """
 				{
 				  "mobileNumber": "+971505555555",
 				  "firstName": "Updated",
@@ -96,16 +98,16 @@ class CustomerApiIT {
 				}
 				""");
 
-		assertThat(updateResponse.statusCode()).isEqualTo(200);
-		var updatedCustomer = objectMapper.readTree(updateResponse.body());
-		assertThat(updatedCustomer.path("mobileNumber").asText()).isEqualTo("+971505555555");
-		assertThat(updatedCustomer.path("firstName").asText()).isEqualTo("Updated");
-		assertThat(updatedCustomer.path("version").asLong()).isEqualTo(1L);
-	}
+        assertThat(updateResponse.statusCode()).isEqualTo(200);
+        var updatedCustomer = objectMapper.readTree(updateResponse.body());
+        assertThat(updatedCustomer.path("mobileNumber").asText()).isEqualTo("+971505555555");
+        assertThat(updatedCustomer.path("firstName").asText()).isEqualTo("Updated");
+        assertThat(updatedCustomer.path("version").asLong()).isEqualTo(1L);
+    }
 
-	@Test
-	void rejectsStaleProfileUpdate() throws Exception {
-		var registrationResponse = sendJson("POST", "/admin/v1/customers", """
+    @Test
+    void rejectsStaleProfileUpdate() throws Exception {
+        var registrationResponse = sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "stale.update@example.com",
 				  "mobileNumber": "+971506666666",
@@ -114,9 +116,12 @@ class CustomerApiIT {
 				  "dateOfBirth": "1990-01-01"
 				}
 				""");
-		var createdCustomer = objectMapper.readTree(registrationResponse.body());
+        var createdCustomer = objectMapper.readTree(registrationResponse.body());
 
-		var updateResponse = sendJson("PATCH", "/api/v1/customers/" + createdCustomer.path("customerId").asText() + "/profile", """
+        var updateResponse = sendJson(
+                "PATCH",
+                "/api/v1/customers/" + createdCustomer.path("customerId").asText() + "/profile",
+                """
 				{
 				  "mobileNumber": "+971507777777",
 				  "firstName": "Updated",
@@ -125,16 +130,16 @@ class CustomerApiIT {
 				}
 				""");
 
-		assertThat(updateResponse.statusCode()).isEqualTo(409);
-		var problem = objectMapper.readTree(updateResponse.body());
-		assertThat(problem.path("title").asText()).isEqualTo("Customer profile conflict");
-		assertThat(problem.path("currentVersion").asLong()).isEqualTo(0L);
-		assertThat(problem.path("expectedVersion").asLong()).isEqualTo(99L);
-	}
+        assertThat(updateResponse.statusCode()).isEqualTo(409);
+        var problem = objectMapper.readTree(updateResponse.body());
+        assertThat(problem.path("title").asText()).isEqualTo("Customer profile conflict");
+        assertThat(problem.path("currentVersion").asLong()).isEqualTo(0L);
+        assertThat(problem.path("expectedVersion").asLong()).isEqualTo(99L);
+    }
 
-	@Test
-	void rejectsDuplicateCustomerEmail() throws Exception {
-		sendJson("POST", "/admin/v1/customers", """
+    @Test
+    void rejectsDuplicateCustomerEmail() throws Exception {
+        sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "duplicate@example.com",
 				  "mobileNumber": "+971502222222",
@@ -144,7 +149,7 @@ class CustomerApiIT {
 				}
 				""");
 
-		var duplicateResponse = sendJson("POST", "/admin/v1/customers", """
+        var duplicateResponse = sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "DUPLICATE@example.com",
 				  "mobileNumber": "+971503333333",
@@ -154,33 +159,33 @@ class CustomerApiIT {
 				}
 				""");
 
-		assertThat(duplicateResponse.statusCode()).isEqualTo(409);
-		var problem = objectMapper.readTree(duplicateResponse.body());
-		assertThat(problem.path("title").asText()).isEqualTo("Customer already exists");
-		assertThat(problem.path("field").asText()).isEqualTo("email");
-	}
+        assertThat(duplicateResponse.statusCode()).isEqualTo(409);
+        var problem = objectMapper.readTree(duplicateResponse.body());
+        assertThat(problem.path("title").asText()).isEqualTo("Customer already exists");
+        assertThat(problem.path("field").asText()).isEqualTo("email");
+    }
 
-	@Test
-	void returnsEmptyAdminCustomerPage() throws Exception {
-		var response = send("GET", "/admin/v1/customers?email=missing-admin-customer@example.com");
+    @Test
+    void returnsEmptyAdminCustomerPage() throws Exception {
+        var response = send("GET", "/admin/v1/customers?email=missing-admin-customer@example.com");
 
-		assertThat(response.statusCode())
-				.withFailMessage("Expected admin customer search to return 200 but got %s with body: %s",
-						response.statusCode(),
-						response.body())
-				.isEqualTo(200);
-		var page = objectMapper.readTree(response.body());
-		assertThat(page.path("items")).isEmpty();
-		assertThat(page.path("pageNumber").asInt()).isZero();
-		assertThat(page.path("pageSize").asInt()).isEqualTo(20);
-		assertThat(page.path("totalElements").asLong()).isZero();
-		assertThat(page.path("totalPages").asInt()).isZero();
-		assertThat(page.path("last").asBoolean()).isTrue();
-	}
+        assertThat(response.statusCode())
+                .withFailMessage(
+                        "Expected admin customer search to return 200 but got %s with body: %s",
+                        response.statusCode(), response.body())
+                .isEqualTo(200);
+        var page = objectMapper.readTree(response.body());
+        assertThat(page.path("items")).isEmpty();
+        assertThat(page.path("pageNumber").asInt()).isZero();
+        assertThat(page.path("pageSize").asInt()).isEqualTo(20);
+        assertThat(page.path("totalElements").asLong()).isZero();
+        assertThat(page.path("totalPages").asInt()).isZero();
+        assertThat(page.path("last").asBoolean()).isTrue();
+    }
 
-	@Test
-	void returnsFilteredAdminCustomerPageWithTotals() throws Exception {
-		sendJson("POST", "/admin/v1/customers", """
+    @Test
+    void returnsFilteredAdminCustomerPageWithTotals() throws Exception {
+        sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "admin.customer@example.com",
 				  "mobileNumber": "+971508888888",
@@ -190,48 +195,50 @@ class CustomerApiIT {
 				}
 				""");
 
-		var response = send("GET",
-				"/admin/v1/customers?email=ADMIN.Customer@example.com&page=0&size=10&sort=email,asc");
+        var response =
+                send("GET", "/admin/v1/customers?email=ADMIN.Customer@example.com&page=0&size=10&sort=email,asc");
 
-		assertThat(response.statusCode())
-				.withFailMessage("Expected admin customer search to return 200 but got %s with body: %s",
-						response.statusCode(),
-						response.body())
-				.isEqualTo(200);
-		var page = objectMapper.readTree(response.body());
-		assertThat(page.path("items")).hasSize(1);
-		assertThat(page.path("items").get(0).path("email").asText()).isEqualTo("admin.customer@example.com");
-		assertThat(page.path("items").get(0).path("status").asText()).isEqualTo("ACTIVE");
-		assertThat(page.path("pageNumber").asInt()).isZero();
-		assertThat(page.path("pageSize").asInt()).isEqualTo(10);
-		assertThat(page.path("totalElements").asLong()).isEqualTo(1);
-		assertThat(page.path("totalPages").asInt()).isEqualTo(1);
-		assertThat(page.path("last").asBoolean()).isTrue();
-	}
+        assertThat(response.statusCode())
+                .withFailMessage(
+                        "Expected admin customer search to return 200 but got %s with body: %s",
+                        response.statusCode(), response.body())
+                .isEqualTo(200);
+        var page = objectMapper.readTree(response.body());
+        assertThat(page.path("items")).hasSize(1);
+        assertThat(page.path("items").get(0).path("email").asText()).isEqualTo("admin.customer@example.com");
+        assertThat(page.path("items").get(0).path("status").asText()).isEqualTo("ACTIVE");
+        assertThat(page.path("pageNumber").asInt()).isZero();
+        assertThat(page.path("pageSize").asInt()).isEqualTo(10);
+        assertThat(page.path("totalElements").asLong()).isEqualTo(1);
+        assertThat(page.path("totalPages").asInt()).isEqualTo(1);
+        assertThat(page.path("last").asBoolean()).isTrue();
+    }
 
-	@Test
-	void rejectsInvalidAdminCustomerPageSize() throws Exception {
-		var response = send("GET", "/admin/v1/customers?size=101");
+    @Test
+    void rejectsInvalidAdminCustomerPageSize() throws Exception {
+        var response = send("GET", "/admin/v1/customers?size=101");
 
-		assertThat(response.statusCode()).isEqualTo(400);
-		var problem = objectMapper.readTree(response.body());
-		assertThat(problem.path("type").asText()).isEqualTo("https://digital-bank-java.local/problems/validation-error");
-		assertThat(problem.path("title").asText()).isEqualTo("Invalid request");
-	}
+        assertThat(response.statusCode()).isEqualTo(400);
+        var problem = objectMapper.readTree(response.body());
+        assertThat(problem.path("type").asText())
+                .isEqualTo("https://digital-bank-java.local/problems/validation-error");
+        assertThat(problem.path("title").asText()).isEqualTo("Invalid request");
+    }
 
-	@Test
-	void rejectsUnsupportedAdminCustomerSortField() throws Exception {
-		var response = send("GET", "/admin/v1/customers?sort=unsupportedField,asc");
+    @Test
+    void rejectsUnsupportedAdminCustomerSortField() throws Exception {
+        var response = send("GET", "/admin/v1/customers?sort=unsupportedField,asc");
 
-		assertThat(response.statusCode()).isEqualTo(400);
-		var problem = objectMapper.readTree(response.body());
-		assertThat(problem.path("type").asText()).isEqualTo("https://digital-bank-java.local/problems/validation-error");
-		assertThat(problem.path("title").asText()).isEqualTo("Invalid request");
-	}
+        assertThat(response.statusCode()).isEqualTo(400);
+        var problem = objectMapper.readTree(response.body());
+        assertThat(problem.path("type").asText())
+                .isEqualTo("https://digital-bank-java.local/problems/validation-error");
+        assertThat(problem.path("title").asText()).isEqualTo("Invalid request");
+    }
 
-	@Test
-	void rejectsInvalidRegistrationRequest() throws Exception {
-		var response = sendJson("POST", "/admin/v1/customers", """
+    @Test
+    void rejectsInvalidRegistrationRequest() throws Exception {
+        var response = sendJson("POST", "/admin/v1/customers", """
 				{
 				  "email": "not-an-email",
 				  "mobileNumber": "0501234567",
@@ -241,85 +248,117 @@ class CustomerApiIT {
 				}
 				""");
 
-		assertThat(response.statusCode()).isEqualTo(400);
-		var problem = objectMapper.readTree(response.body());
-		assertThat(problem.path("title").asText()).isEqualTo("Invalid request");
-		assertThat(problem.path("errors")).isNotEmpty();
-	}
+        assertThat(response.statusCode()).isEqualTo(400);
+        var problem = objectMapper.readTree(response.body());
+        assertThat(problem.path("title").asText()).isEqualTo("Invalid request");
+        assertThat(problem.path("errors")).isNotEmpty();
+    }
 
-	@Test
-	void publishesOpenApiContract() throws Exception {
-		var response = send("GET", "/v3/api-docs");
+    @Test
+    void publishesOpenApiContract() throws Exception {
+        var response = send("GET", "/v3/api-docs");
 
-		assertThat(response.statusCode()).isEqualTo(200);
-		var openApi = objectMapper.readTree(response.body());
-		assertThat(openApi.path("paths").has("/admin/v1/customers")).isTrue();
+        assertThat(response.statusCode()).isEqualTo(200);
+        var openApi = objectMapper.readTree(response.body());
+        assertThat(openApi.path("paths").has("/admin/v1/customers")).isTrue();
 
-		var registerResponses = openApi.path("paths").path("/admin/v1/customers").path("post").path("responses");
-		assertThat(registerResponses.path("201").path("content").has("application/json")).isTrue();
-		assertThat(registerResponses.path("400").path("content").has("application/problem+json")).isTrue();
-		assertThat(registerResponses.path("409").path("content").has("application/problem+json")).isTrue();
-		assertThat(registerResponses.path("400").path("content").has("application/json")).isFalse();
-		assertThat(registerResponses.path("400")
-				.path("content")
-				.path("application/problem+json")
-				.path("examples")
-				.has("validation-error")).isTrue();
-		assertThat(registerResponses.path("409")
-				.path("content")
-				.path("application/problem+json")
-				.path("examples")
-				.has("customer-conflict")).isTrue();
+        var registerResponses =
+                openApi.path("paths").path("/admin/v1/customers").path("post").path("responses");
+        assertThat(registerResponses.path("201").path("content").has("application/json"))
+                .isTrue();
+        assertThat(registerResponses.path("400").path("content").has("application/problem+json"))
+                .isTrue();
+        assertThat(registerResponses.path("409").path("content").has("application/problem+json"))
+                .isTrue();
+        assertThat(registerResponses.path("400").path("content").has("application/json"))
+                .isFalse();
+        assertThat(registerResponses
+                        .path("400")
+                        .path("content")
+                        .path("application/problem+json")
+                        .path("examples")
+                        .has("validation-error"))
+                .isTrue();
+        assertThat(registerResponses
+                        .path("409")
+                        .path("content")
+                        .path("application/problem+json")
+                        .path("examples")
+                        .has("customer-conflict"))
+                .isTrue();
 
-		var getProfileResponses = openApi.path("paths").path("/api/v1/customers/{customerId}").path("get").path("responses");
-		assertThat(getProfileResponses.path("200").path("content").has("application/json")).isTrue();
-		assertThat(getProfileResponses.path("404").path("content").has("application/problem+json")).isTrue();
-		assertThat(getProfileResponses.path("404")
-				.path("content")
-				.path("application/problem+json")
-				.path("examples")
-				.has("customer-not-found")).isTrue();
+        var getProfileResponses = openApi.path("paths")
+                .path("/api/v1/customers/{customerId}")
+                .path("get")
+                .path("responses");
+        assertThat(getProfileResponses.path("200").path("content").has("application/json"))
+                .isTrue();
+        assertThat(getProfileResponses.path("404").path("content").has("application/problem+json"))
+                .isTrue();
+        assertThat(getProfileResponses
+                        .path("404")
+                        .path("content")
+                        .path("application/problem+json")
+                        .path("examples")
+                        .has("customer-not-found"))
+                .isTrue();
 
-		var updateProfileResponses = openApi.path("paths").path("/api/v1/customers/{customerId}/profile").path("patch").path("responses");
-		assertThat(updateProfileResponses.path("200").path("content").has("application/json")).isTrue();
-		assertThat(updateProfileResponses.path("400").path("content").has("application/problem+json")).isTrue();
-		assertThat(updateProfileResponses.path("404").path("content").has("application/problem+json")).isTrue();
-		assertThat(updateProfileResponses.path("409").path("content").has("application/problem+json")).isTrue();
-		assertThat(updateProfileResponses.path("400")
-				.path("content")
-				.path("application/problem+json")
-				.path("examples")
-				.has("validation-error")).isTrue();
-		assertThat(updateProfileResponses.path("404")
-				.path("content")
-				.path("application/problem+json")
-				.path("examples")
-				.has("customer-not-found")).isTrue();
-		assertThat(updateProfileResponses.path("409")
-				.path("content")
-				.path("application/problem+json")
-				.path("examples")
-				.has("profile-conflict")).isTrue();
+        var updateProfileResponses = openApi.path("paths")
+                .path("/api/v1/customers/{customerId}/profile")
+                .path("patch")
+                .path("responses");
+        assertThat(updateProfileResponses.path("200").path("content").has("application/json"))
+                .isTrue();
+        assertThat(updateProfileResponses.path("400").path("content").has("application/problem+json"))
+                .isTrue();
+        assertThat(updateProfileResponses.path("404").path("content").has("application/problem+json"))
+                .isTrue();
+        assertThat(updateProfileResponses.path("409").path("content").has("application/problem+json"))
+                .isTrue();
+        assertThat(updateProfileResponses
+                        .path("400")
+                        .path("content")
+                        .path("application/problem+json")
+                        .path("examples")
+                        .has("validation-error"))
+                .isTrue();
+        assertThat(updateProfileResponses
+                        .path("404")
+                        .path("content")
+                        .path("application/problem+json")
+                        .path("examples")
+                        .has("customer-not-found"))
+                .isTrue();
+        assertThat(updateProfileResponses
+                        .path("409")
+                        .path("content")
+                        .path("application/problem+json")
+                        .path("examples")
+                        .has("profile-conflict"))
+                .isTrue();
 
-		var adminCustomerResponses = openApi.path("paths").path("/admin/v1/customers").path("get").path("responses");
-		assertThat(adminCustomerResponses.path("200").path("content").has("application/json")).isTrue();
-		assertThat(adminCustomerResponses.path("400").path("content").has("application/problem+json")).isTrue();
-	}
+        var adminCustomerResponses =
+                openApi.path("paths").path("/admin/v1/customers").path("get").path("responses");
+        assertThat(adminCustomerResponses.path("200").path("content").has("application/json"))
+                .isTrue();
+        assertThat(adminCustomerResponses.path("400").path("content").has("application/problem+json"))
+                .isTrue();
+    }
 
-	private HttpResponse<String> send(String method, String path) throws Exception {
-		var request = HttpRequest.newBuilder()
-				.uri(URI.create("http://localhost:" + port + path))
-				.method(method, HttpRequest.BodyPublishers.noBody())
-				.build();
-		return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-	}
+    private HttpResponse<String> send(String method, String path) throws Exception {
+        var request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + path))
+                .method(method, HttpRequest.BodyPublishers.noBody())
+                .build();
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    }
 
-	private HttpResponse<String> sendJson(String method, String path, String body) throws Exception {
-		var request = HttpRequest.newBuilder()
-				.uri(URI.create("http://localhost:" + port + path))
-				.header("Content-Type", "application/json")
-				.method(method, HttpRequest.BodyPublishers.ofString(body))
-				.build();
-		return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-	}
+    private HttpResponse<String> sendJson(String method, String path, String body) throws Exception {
+        var request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + path))
+                .header("Content-Type", "application/json")
+                .method(method, HttpRequest.BodyPublishers.ofString(body))
+                .build();
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    }
 }

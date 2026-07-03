@@ -4,5 +4,5 @@ import com.digitalbank.customerservice.domain.model.CustomerId;
 
 public interface GetCustomerProfileUseCase {
 
-	CustomerProfile getCustomerProfile(CustomerId customerId);
+    CustomerProfile getCustomerProfile(CustomerId customerId);
 }
