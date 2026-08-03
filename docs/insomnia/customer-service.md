@@ -4,21 +4,20 @@ Use these requests under the existing `Customer Service` folder in the platform 
 
 ## Environment Variables
 
-The environment should include these variables:
+Use the SIT API Gateway route for these requests. The environment should include:
 
 ```json
 {
-  "configServerUrl": "http://localhost:8888",
-  "customerServiceUrl": "http://localhost:8081"
+  "apiGatewayUrl": "http://localhost:8080"
 }
 ```
 
-For `SIT` and `UAT`, replace `customerServiceUrl` with the API Gateway or service URL for that environment.
+For `SIT` and `UAT`, set `apiGatewayUrl` to the gateway URL for that environment.
 
 ## Register Customer
 
 ```text
-POST {{ _.customerServiceUrl }}/api/v1/customers
+POST {{ _.apiGatewayUrl }}/admin/v1/customers
 ```
 
 Headers:
@@ -50,7 +49,7 @@ After a successful request, use the returned `customerId` as the path parameter 
 ## Get Customer Profile
 
 ```text
-GET {{ _.customerServiceUrl }}/api/v1/customers/:customerId
+GET {{ _.apiGatewayUrl }}/api/v1/customers/:customerId
 ```
 
 Path parameters:
@@ -68,7 +67,7 @@ Expected response:
 ## Update Customer Profile
 
 ```text
-PATCH {{ _.customerServiceUrl }}/api/v1/customers/:customerId/profile
+PATCH {{ _.apiGatewayUrl }}/api/v1/customers/:customerId/profile
 ```
 
 Headers:
@@ -109,7 +108,7 @@ If another update already changed the profile, the same request with an old `exp
 ## OpenAPI Contract
 
 ```text
-GET {{ _.customerServiceUrl }}/v3/api-docs
+GET {{ _.apiGatewayUrl }}/admin/docs/customer-service/v3/api-docs
 ```
 
 Expected response:
@@ -121,7 +120,7 @@ Expected response:
 ## Validation Failure Example
 
 ```text
-POST {{ _.customerServiceUrl }}/api/v1/customers
+POST {{ _.apiGatewayUrl }}/admin/v1/customers
 ```
 
 Body:
