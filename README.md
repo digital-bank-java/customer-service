@@ -103,7 +103,7 @@ Build the image:
 
 ```bash
 docker build \
-  --tag digital-bank-java/customer-service:0.0.1 \
+  --tag digital-bank-java/customer-service:0.0.2 \
   .
 ```
 
@@ -115,7 +115,7 @@ docker run --rm \
   --publish 8081:8081 \
   --env CONFIG_SERVER_URL=http://host.docker.internal:8888 \
   --env SPRING_PROFILES_ACTIVE=sit \
-  digital-bank-java/customer-service:0.0.1
+  digital-bank-java/customer-service:0.0.2
 ```
 
 Customer Service is database-backed. When running it in Docker for debugging, also provide the temporary SIT datasource variables described in the shared workstation procedure, using `host.docker.internal` for the forwarded PostgreSQL host.
@@ -126,7 +126,7 @@ The runtime image uses numeric non-root user and group `10001:10001`.
 
 The Config Server release must already be healthy in the `digital-bank-sit` namespace. The Customer Service chart uses the internal Kubernetes address `http://config-server:8888` and activates the `sit` profile.
 
-The shared local PostgreSQL release from `infra-sit` must also be installed in `digital-bank-sit`. Customer Service connects to the `customer_service` logical database through the in-cluster `postgres` Service and reads credentials from the existing `postgres` Kubernetes Secret.
+The shared SIT PostgreSQL release from `infra-sit` must also be installed in `digital-bank-sit`. Customer Service connects to the `customer_service` logical database through the in-cluster `postgres` Service and reads credentials from the existing `postgres` Kubernetes Secret.
 
 Validate the chart without changing the cluster:
 
@@ -156,29 +156,22 @@ kubectl get deployment,pods,service --namespace digital-bank-sit
 kubectl logs deployment/customer-service --namespace digital-bank-sit
 ```
 
-Temporarily forward the internal Service for workstation verification:
-
-```bash
-kubectl port-forward \
-  service/customer-service 18081:8081 \
-  --namespace digital-bank-sit
-```
-
-From another terminal:
-
-```bash
-curl --fail http://localhost:18081/actuator/health
-curl --fail http://localhost:18081/actuator/health/liveness
-curl --fail http://localhost:18081/actuator/health/readiness
-```
-
-After API Gateway is deployed, prefer verifying Customer Service through the gateway:
+Use API Gateway as the workstation verification path for SIT:
 
 ```bash
 kubectl port-forward \
   service/api-gateway 8080:8080 \
   --namespace digital-bank-sit
 ```
+
+From another terminal:
+
+```bash
+curl --fail http://localhost:8080/customer-service/actuator/health
+curl --fail http://localhost:8080/admin/docs/customer-service/v3/api-docs
+```
+
+Port-forward the `customer-service` Service directly only when debugging the service itself.
 
 In Insomnia, create equivalent requests using the environment variable:
 
@@ -222,6 +215,7 @@ curl --request POST http://localhost:8080/admin/v1/customers \
 Copy the returned `customerId`, then verify lookup and admin query endpoints:
 
 ```bash
+curl --fail http://localhost:8080/admin/docs/customer-service/v3/api-docs
 curl --fail http://localhost:8080/api/v1/customers/<customer-id>
 curl --fail "http://localhost:8080/admin/v1/customers?status=ACTIVE&page=0&size=20&sort=createdAt,desc"
 curl --fail "http://localhost:8080/admin/v1/customers?email=customer@example.com&page=0&size=20&sort=email,asc"

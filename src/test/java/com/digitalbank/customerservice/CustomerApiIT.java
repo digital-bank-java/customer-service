@@ -260,6 +260,10 @@ class CustomerApiIT {
 
         assertThat(response.statusCode()).isEqualTo(200);
         var openApi = objectMapper.readTree(response.body());
+        assertThat(openApi.path("info").path("title").asText()).isEqualTo("Digital Bank Customer Service API");
+        assertThat(openApi.path("info").path("description").asText())
+                .isEqualTo("Customer profile and lifecycle APIs for the Digital Bank Java platform.");
+        assertThat(openApi.path("info").path("version").asText()).isEqualTo("1.0.0");
         assertThat(openApi.path("paths").has("/admin/v1/customers")).isTrue();
 
         var registerResponses =
