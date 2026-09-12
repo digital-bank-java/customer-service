@@ -30,6 +30,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -49,16 +50,19 @@ class CustomerController {
     private final GetCustomerProfileUseCase getCustomerProfileUseCase;
     private final UpdateCustomerProfileUseCase updateCustomerProfileUseCase;
     private final ListCustomersUseCase listCustomersUseCase;
+    private final CustomerResourceAuthorization resourceAuthorization;
 
     CustomerController(
             RegisterCustomerUseCase registerCustomerUseCase,
             GetCustomerProfileUseCase getCustomerProfileUseCase,
             UpdateCustomerProfileUseCase updateCustomerProfileUseCase,
-            ListCustomersUseCase listCustomersUseCase) {
+            ListCustomersUseCase listCustomersUseCase,
+            CustomerResourceAuthorization resourceAuthorization) {
         this.registerCustomerUseCase = registerCustomerUseCase;
         this.getCustomerProfileUseCase = getCustomerProfileUseCase;
         this.updateCustomerProfileUseCase = updateCustomerProfileUseCase;
         this.listCustomersUseCase = listCustomersUseCase;
+        this.resourceAuthorization = resourceAuthorization;
     }
 
     @PostMapping("/admin/v1/customers")
@@ -129,7 +133,8 @@ class CustomerController {
                                             name = "customer-not-found",
                                             summary = "Customer not found",
                                             value = CUSTOMER_NOT_FOUND_PROBLEM_EXAMPLE)))
-    ResponseEntity<CustomerResponse> getCustomerProfile(@PathVariable UUID customerId) {
+    ResponseEntity<CustomerResponse> getCustomerProfile(@PathVariable UUID customerId, Authentication authentication) {
+        resourceAuthorization.requireCustomerAccess(customerId, authentication);
         var profile = getCustomerProfileUseCase.getCustomerProfile(new CustomerId(customerId));
         return ResponseEntity.ok(CustomerResponse.from(profile));
     }
@@ -180,7 +185,10 @@ class CustomerController {
                                             summary = "Stale profile update",
                                             value = PROFILE_CONFLICT_PROBLEM_EXAMPLE)))
     ResponseEntity<CustomerResponse> updateCustomerProfile(
-            @PathVariable UUID customerId, @Valid @RequestBody UpdateCustomerProfileRequest request) {
+            @PathVariable UUID customerId,
+            @Valid @RequestBody UpdateCustomerProfileRequest request,
+            Authentication authentication) {
+        resourceAuthorization.requireCustomerAccess(customerId, authentication);
         var profile = updateCustomerProfileUseCase.updateCustomerProfile(new UpdateCustomerProfileCommand(
                 new CustomerId(customerId),
                 request.mobileNumber(),
