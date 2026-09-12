@@ -12,6 +12,10 @@ runtime:
   profile: sit
   configServerUrl: http://config-server:8888
 
+security:
+  secretName: auth-service-secrets
+  secretKey: jwt-secret
+
 database:
   url: jdbc:postgresql://postgres:5432/customer_service
   driverClassName: org.postgresql.Driver
